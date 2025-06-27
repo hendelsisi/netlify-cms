@@ -1,6 +1,6 @@
 backend:
   name: github
-  repo: your-username/your-repo-name
+  repo: hendelsisi/netlify-cms
   branch: main
 
 media_folder: "images"
