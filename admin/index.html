@@ -1,26 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Auth0 Login - Self Hosted SDK</title>
+  <meta charset="utf-8" />
+  <title>Content Manager</title>
+  <!-- Load Decap CMS from CDN -->
+  <script src="https://unpkg.com/@decaporg/decap-cms@^1.0.0/dist/decap-cms.js"></script>
 </head>
 <body>
+  <!-- CMS Mount Point -->
   <div id="nc-root"></div>
-  <h1>Welcome</h1>
-  <div id="content">CMS</div>
 
+  <!-- Optional: Manual init as fallback -->
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Initialize CMS only after DOM is ready
-      if (window.CMS) {
-        window.CMS.init();
+    document.addEventListener("DOMContentLoaded", function() {
+      if (window.DecapCMS) {
+        console.log("Decap CMS loaded successfully!");
       } else {
-        console.error('Netlify CMS script not loaded!');
+        console.error("Decap CMS script failed to load!");
+        // Check browser's Network tab for 404 errors
       }
     });
   </script>
-  <!-- Load script AFTER the event listener is set up -->
-<!--   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script> -->
-  <script src="https://unpkg.com/@decaporg/decap-cms@^1.0.0/dist/decap-cms.js"></script>
 </body>
 </html>
