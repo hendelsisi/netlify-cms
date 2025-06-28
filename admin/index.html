@@ -4,87 +4,95 @@
   <meta charset="utf-8">
   <title>CMS</title>
   <style>
-    /* Create a bulletproof container */
-    #cms-atomic-root {
+    #cms-root {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 2147483647; /* Maximum possible z-index */
+      z-index: 2147483647;
       background: white;
-      overflow: auto;
     }
   </style>
 </head>
 <body>
-  <!-- Isolated atomic container -->
-  <iframe id="cms-iframe" style="display:none"></iframe>
-  
+  <!-- Stable mount point -->
+  <div id="cms-root"></div>
   <script>
     (function() {
-      // 1. Nuclear cleanup
-      function atomicCleanup() {
-        const iframe = document.getElementById('cms-iframe');
-        if (iframe) {
-          iframe.style.display = 'none';
-          iframe.srcdoc = '';
-        }
-        if (window.CMS?.dispose) {
-          try { window.CMS.dispose(); } catch(e) {}
-        }
-      }
-
-      // 2. Atomic initialization
-      function atomicInit() {
-        atomicCleanup();
-        
-        const iframe = document.getElementById('cms-iframe');
-        iframe.srcdoc = `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <base target="_parent">
-              <script src="https://unpkg.com/decap-cms@3.7.1/dist/decap-cms.js"><\/script>
-            </head>
-            <body>
-              <div id="nc-root"></div>
-              <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                  if (window.CMS) {
-                    window.CMS.init();
-                    window.parent.postMessage('CMS_READY', '*');
-                  }
-                });
-              <\/script>
-            </body>
-          </html>
-        `;
-        iframe.style.display = 'block';
-        iframe.style.width = '100vw';
-        iframe.style.height = '100vh';
-        iframe.style.border = 'none';
-      }
-
-      // 3. Start when completely safe
-      function safeStart() {
+      // 1. Ensure DOM is completely ready
+      function domReady(fn) {
         if (document.readyState === 'complete') {
-          setTimeout(atomicInit, 100);
+          setTimeout(fn, 100);
         } else {
           window.addEventListener('load', function() {
-            setTimeout(atomicInit, 100);
+            setTimeout(fn, 100);
           });
         }
       }
 
-      // 4. Listen for ready message
-      window.addEventListener('message', function(e) {
-        if (e.data === 'CMS_READY') {
-          console.log('CMS initialized in atomic container');
+      // 2. Bulletproof initialization
+      function initCMS() {
+        // Create guaranteed mount point
+        let root = document.getElementById('cms-root');
+        if (!root) {
+          root = document.createElement('div');
+          root.id = 'cms-root';
+          document.body.appendChild(root);
         }
-      });
+        root.innerHTML = '';
 
-      safeStart();
+        // Load script with fallback
+        const loadScript = (src, onSuccess, onError, attempts = 0) => {
+          const script = document.createElement('script');
+          script.src = src;
+          script.onload = onSuccess;
+          script.onerror = function() {
+            if (attempts < 2) {
+              setTimeout(() => loadScript(src, onSuccess, onError, attempts + 1), 500);
+            } else {
+              onError();
+            }
+          };
+          document.body.appendChild(script);
+        };
+
+        loadScript(
+          'https://unpkg.com/decap-cms@3.7.1/dist/decap-cms.js',
+          function() {
+            if (window.CMS) {
+              try {
+                // Extra DOM readiness check
+                requestAnimationFrame(() => {
+                  const checkRoot = document.getElementById('cms-root');
+                  if (checkRoot) {
+                    window.CMS.init();
+                    console.log('CMS initialized successfully');
+                  } else {
+                    console.error('Mount point disappeared');
+                    initCMS(); // Retry
+                  }
+                });
+              } catch (e) {
+                console.error('CMS init error:', e);
+                setTimeout(initCMS, 1000);
+              }
+            }
+          },
+          function() {
+            console.error('Failed to load CMS script');
+            // Fallback to jsDelivr
+            loadScript(
+              'https://cdn.jsdelivr.net/npm/decap-cms@3.7.1/dist/decap-cms.js',
+              arguments.callee.onSuccess,
+              arguments.callee.onError
+            );
+          }
+        );
+      }
+
+      // Start the process
+      domReady(initCMS);
     })();
   </script>
 </body>
