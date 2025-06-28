@@ -4,152 +4,84 @@
   <meta charset="utf-8">
   <title>CMS</title>
   <style>
-    /* Create an isolated, indestructible container */
-    #cms-bulletproof-container {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      z-index: 2147483647 !important; /* Max z-index */
-      background: white !important;
-      overflow: auto !important;
-      display: block !important;
+    /* Create a bulletproof container */
+    #cms-atomic-root {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 2147483647; /* Maximum possible z-index */
+      background: white;
+      overflow: auto;
     }
   </style>
 </head>
 <body>
-  <!-- Permanent container that cannot be removed -->
-  <div id="cms-bulletproof-container">
-    <div id="nc-root"></div>
-  </div>
-
+  <!-- Isolated atomic container -->
+  <iframe id="cms-iframe" style="display:none"></iframe>
+  
   <script>
     (function() {
-      // 1. Nuclear cleanup function
-      function bulletproofCleanup() {
-        const container = document.getElementById('cms-bulletproof-container');
-        if (container) {
-          container.innerHTML = '<div id="nc-root"></div>';
+      // 1. Nuclear cleanup
+      function atomicCleanup() {
+        const iframe = document.getElementById('cms-iframe');
+        if (iframe) {
+          iframe.style.display = 'none';
+          iframe.srcdoc = '';
         }
         if (window.CMS?.dispose) {
-          try {
-            window.CMS.dispose();
-          } catch (e) {
-            console.warn('Cleanup warning:', e);
-          }
+          try { window.CMS.dispose(); } catch(e) {}
         }
       }
 
       // 2. Atomic initialization
-      function bulletproofInit() {
-        bulletproofCleanup();
+      function atomicInit() {
+        atomicCleanup();
         
-        // Create guaranteed mount point
-        let root = document.getElementById('nc-root');
-        if (!root) {
-          const container = document.getElementById('cms-bulletproof-container');
-          if (container) {
-            container.innerHTML = '<div id="nc-root"></div>';
-            root = document.getElementById('nc-root');
-          }
-        }
-
-        if (!root) {
-          console.error('Failed to create mount point');
-          return;
-        }
-
-        // Load with multiple fallbacks
-        const loadScript = (src, attempt = 0) => {
-          return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = () => {
-              if (attempt < 2) {
-                setTimeout(() => loadScript(src, attempt + 1), 500 * (attempt + 1))
-                  .then(resolve)
-                  .catch(reject);
-              } else {
-                reject(new Error(`Failed to load ${src}`));
-              }
-            };
-            document.head.appendChild(script);
-          });
-        };
-
-        // Main loading sequence
-        Promise.race([
-          loadScript('https://unpkg.com/decap-cms@3.7.1/dist/decap-cms.js'),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-        ])
-        .then(() => {
-          if (window.CMS) {
-            // Final DOM verification
-            requestAnimationFrame(() => {
-              const finalCheck = document.getElementById('nc-root');
-              if (finalCheck) {
-                window.CMS.init();
-                console.log('CMS initialized successfully');
-                // Lock the container
-                const container = document.getElementById('cms-bulletproof-container');
-                if (container) {
-                  Object.defineProperty(container, 'innerHTML', {
-                    set: function() {},
-                    get: function() { return '<div id="nc-root"></div>'; }
-                  });
-                }
-              } else {
-                throw new Error('Mount point lost during init');
-              }
-            });
-          } else {
-            throw new Error('CMS not loaded');
-          }
-        })
-        .catch((err) => {
-          console.error('Loading failed:', err);
-          // Try fallback CDN
-          loadScript('https://cdn.jsdelivr.net/npm/decap-cms@3.7.1/dist/decap-cms.js')
-            .then(() => {
-              if (window.CMS) window.CMS.init();
-            });
-        });
+        const iframe = document.getElementById('cms-iframe');
+        iframe.srcdoc = `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <base target="_parent">
+              <script src="https://unpkg.com/decap-cms@3.7.1/dist/decap-cms.js"><\/script>
+            </head>
+            <body>
+              <div id="nc-root"></div>
+              <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  if (window.CMS) {
+                    window.CMS.init();
+                    window.parent.postMessage('CMS_READY', '*');
+                  }
+                });
+              <\/script>
+            </body>
+          </html>
+        `;
+        iframe.style.display = 'block';
+        iframe.style.width = '100vw';
+        iframe.style.height = '100vh';
+        iframe.style.border = 'none';
       }
 
-      // 3. Start when absolutely safe
+      // 3. Start when completely safe
       function safeStart() {
         if (document.readyState === 'complete') {
-          setTimeout(bulletproofInit, 100);
+          setTimeout(atomicInit, 100);
         } else {
-          const readyListener = () => {
-            setTimeout(bulletproofInit, 100);
-            window.removeEventListener('load', readyListener);
-          };
-          window.addEventListener('load', readyListener);
+          window.addEventListener('load', function() {
+            setTimeout(atomicInit, 100);
+          });
         }
       }
 
-      // 4. Protect against DOM mutations
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.removedNodes) {
-            Array.from(mutation.removedNodes).forEach((node) => {
-              if (node.id === 'cms-bulletproof-container' || 
-                  node.id === 'nc-root') {
-                console.warn('Protected element removed - restoring');
-                bulletproofCleanup();
-                bulletproofInit();
-              }
-            });
-          }
-        });
-      });
-
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true
+      // 4. Listen for ready message
+      window.addEventListener('message', function(e) {
+        if (e.data === 'CMS_READY') {
+          console.log('CMS initialized in atomic container');
+        }
       });
 
       safeStart();
