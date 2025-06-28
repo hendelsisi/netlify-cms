@@ -3,25 +3,51 @@
 <head>
   <meta charset="utf-8">
   <title>CMS</title>
+  <style>
+    /* Prevent FOUC and ensure mount point stays in DOM */
+    #nc-root {
+      min-height: 100vh;
+      position: relative;
+    }
+  </style>
 </head>
 <body>
+  <!-- Stable mount point that won't be removed -->
   <div id="nc-root"></div>
 
+  <!-- Load CMS after DOM is fully ready -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // Clean up any existing CMS instance
+      if (window.CMS && window.CMS.dispose) {
+        window.CMS.dispose();
+      }
+
+      // Create fresh mount point if needed
+      let root = document.getElementById('nc-root');
+      if (!root) {
+        root = document.createElement('div');
+        root.id = 'nc-root';
+        document.body.appendChild(root);
+      }
+
+      // Load CMS script
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/decap-cms@3.7.1/dist/decap-cms.js';
       script.onload = function() {
-        // Use window.CMS instead of CMS directly
         if (window.CMS) {
-          window.CMS.init();
-          console.log('Decap CMS initialized successfully!');
+          try {
+            window.CMS.init();
+            console.log('CMS initialized successfully');
+          } catch (e) {
+            console.error('CMS init error:', e);
+          }
         } else {
-          console.error('CMS object not found on window!');
+          console.error('CMS object not found');
         }
       };
       script.onerror = function() {
-        console.error('Failed to load Decap CMS script!');
+        console.error('Failed to load CMS script');
       };
       document.body.appendChild(script);
     });
