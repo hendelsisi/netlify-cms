@@ -4,16 +4,15 @@ backend:
   branch: main
 auth_type: implicit
 site_domain: test-translate-en.netlify.app
-media_folder: "images"
-public_folder: "/images"
+
+media_folder: "static/images"  # Where uploaded files go
+public_folder: "/images"      # Public URL path
 
 collections:
-  - name: "pages"
-    label: "Pages"
-    files:
-      - label: "Home Page"
-        name: "home"
-        file: "index.html"
-        fields:
-          - { label: "Title", name: "title", widget: "string" }
-          - { label: "Body", name: "body", widget: "markdown" }
+  - name: "posts"
+    label: "Posts"
+    folder: "content/posts"
+    create: true
+    fields:
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Body", name: "body", widget: "markdown" }
