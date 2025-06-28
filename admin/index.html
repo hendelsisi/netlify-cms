@@ -1,56 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>CMS</title>
   <style>
-    /* Prevent FOUC and ensure mount point stays in DOM */
-    #nc-root {
-      min-height: 100vh;
-      position: relative;
+    /* Critical isolation styles */
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    #cms-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1000;
+      background: white;
     }
   </style>
 </head>
 <body>
-  <!-- Stable mount point that won't be removed -->
-  <div id="nc-root"></div>
+  <!-- Isolated container for CMS -->
+  <div id="cms-container"></div>
 
-  <!-- Load CMS after DOM is fully ready -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Clean up any existing CMS instance
-      if (window.CMS && window.CMS.dispose) {
+  <!-- Modern loading approach -->
+  <script type="module">
+    // Clean up any previous instances
+    const cleanup = () => {
+      const container = document.getElementById('cms-container');
+      if (container) {
+        container.innerHTML = '';
+      }
+      if (window.CMS?.dispose) {
         window.CMS.dispose();
       }
+    };
 
-      // Create fresh mount point if needed
-      let root = document.getElementById('nc-root');
-      if (!root) {
-        root = document.createElement('div');
-        root.id = 'nc-root';
-        document.body.appendChild(root);
-      }
-
-      // Load CMS script
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/decap-cms@3.7.1/dist/decap-cms.js';
-      script.onload = function() {
+    // Initialize fresh instance
+    const initCMS = async () => {
+      cleanup();
+      
+      // Dynamic import for better error handling
+      try {
+        await import('https://unpkg.com/decap-cms@3.7.1/dist/decap-cms.js');
+        
         if (window.CMS) {
-          try {
-            window.CMS.init();
-            console.log('CMS initialized successfully');
-          } catch (e) {
-            console.error('CMS init error:', e);
-          }
-        } else {
-          console.error('CMS object not found');
+          window.CMS.init();
+          console.log('CMS initialized successfully');
+          
+          // Force redraw to prevent DOM issues
+          requestAnimationFrame(() => {
+            document.getElementById('cms-container').style.display = 'block';
+          });
         }
-      };
-      script.onerror = function() {
-        console.error('Failed to load CMS script');
-      };
-      document.body.appendChild(script);
-    });
+      } catch (error) {
+        console.error('CMS initialization failed:', error);
+        document.getElementById('cms-container').innerHTML = `
+          <div style="padding: 2rem; color: red;">
+            CMS failed to load. Please refresh or check console.
+          </div>
+        `;
+      }
+    };
+
+    // Initialize after slight delay to ensure DOM stability
+    setTimeout(initCMS, 50);
   </script>
 </body>
 </html>
