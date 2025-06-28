@@ -4,15 +4,19 @@ backend:
   branch: main
 auth_type: implicit
 site_domain: test-translate-en.netlify.app
-
+api_root: https://api.github.com
+  base_url: https://github.com
+  
 media_folder: "static/images"  # Where uploaded files go
 public_folder: "/images"      # Public URL path
 
 collections:
   - name: "posts"
     label: "Posts"
-    folder: "content/posts"
+    folder: "content/posts"    # This folder MUST exist in your repo
     create: true
+    slug: "{{slug}}"           # Add this for proper URL generation
     fields:
-      - { label: "Title", name: "title", widget: "string" }
-      - { label: "Body", name: "body", widget: "markdown" }
+      - { label: "Title", name: "title", widget: "string", required: true }
+      - { label: "Publish Date", name: "date", widget: "datetime" }  # Recommended
+      - { label: "Body", name: "body", widget: "markdown", required: true }
