@@ -4,26 +4,30 @@
   <meta charset="utf-8">
   <title>CMS</title>
   <style>
-    /* Create a bulletproof container */
     #cms-atomic-root {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 2147483647; /* Maximum possible z-index */
+      z-index: 2147483647;
       background: white;
       overflow: auto;
+    }
+    #cms-iframe {
+      display: none;
+      width: 100vw;
+      height: 100vh;
+      border: none;
     }
   </style>
 </head>
 <body>
-  <!-- Isolated atomic container -->
-  <iframe id="cms-iframe" style="display:none"></iframe>
-  
+  <!-- Atomic CMS iframe container -->
+  <iframe id="cms-iframe"></iframe>
+
   <script>
-    (function() {
-      // 1. Nuclear cleanup
+    (function () {
       function atomicCleanup() {
         const iframe = document.getElementById('cms-iframe');
         if (iframe) {
@@ -31,62 +35,62 @@
           iframe.srcdoc = '';
         }
         if (window.CMS?.dispose) {
-          try { window.CMS.dispose(); } catch(e) {}
+          try { window.CMS.dispose(); } catch (e) {}
         }
       }
 
-      // 2. Atomic initialization
       function atomicInit() {
         atomicCleanup();
-        
-        const iframe = document.getElementById('cms-iframe');
-        iframe.srcdoc =`
-  <!DOCTYPE html>
-  <html>
-    <head>
-      <base target="_parent">
-      <script src="https://cdn.jsdelivr.net/npm/decap-cms@^3.0.0/dist/decap-cms.js"><\/script>
-    </head>
-    <body>
-      <div id="nc-root"></div>
-      <script>
-        document.addEventListener('DOMContentLoaded', function() {
-          const root = document.getElementById('nc-root');
-          if (window.CMS && root) {
-            try {
-              window.CMS.init();
-              window.parent.postMessage('CMS_READY', '*');
-            } catch (e) {
-              window.parent.postMessage('CMS_ERROR: ' + e.message, '*');
-            }
-          }
-        });
-      <\/script>
-    </body>
-  </html>
-`;
 
-        iframe.style.display = 'block';
-        iframe.style.width = '100vw';
-        iframe.style.height = '100vh';
-        iframe.style.border = 'none';
+        const iframe = document.getElementById('cms-iframe');
+        if (!iframe) return;
+
+        const cmsHTML = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <base target="_parent">
+            <script src="https://cdn.jsdelivr.net/npm/decap-cms@^3.0.0/dist/decap-cms.js"><\/script>
+          </head>
+          <body>
+            <div id="nc-root"></div>
+            <script>
+              window.addEventListener('load', function () {
+                console.log("Initializing CMS...");
+                if (window.CMS && document.getElementById('nc-root')) {
+                  window.CMS.init();
+                  window.parent.postMessage('CMS_READY', '*');
+                } else {
+                  console.error("CMS or nc-root not found");
+                  window.parent.postMessage('CMS_FAILED', '*');
+                }
+              });
+            <\/script>
+          </body>
+          </html>
+        `;
+
+        // Set iframe content after a slight delay to ensure it's in DOM
+        setTimeout(() => {
+          iframe.srcdoc = cmsHTML;
+          iframe.style.display = 'block';
+        }, 100);
       }
 
-      // 3. Start when completely safe
       function safeStart() {
         if (document.readyState === 'complete') {
           setTimeout(atomicInit, 100);
         } else {
-          window.addEventListener('load', function() {
-            setTimeout(atomicInit, 100);
-          });
+          window.addEventListener('load', () => setTimeout(atomicInit, 100));
         }
       }
 
-      // 4. Listen for ready message
-      window.addEventListener('message', function(e) {
+      window.addEventListener('message', function (e) {
         if (e.data === 'CMS_READY') {
-          console.log('CMS initialized in atomic container');
+          console.log('✅ CMS initialized in atomic iframe');
+        }
+        if (e.data === 'CMS_FAILED') {
+          console.error('❌ CMS failed to initialize');
         }
       });
 
