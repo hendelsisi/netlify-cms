@@ -10,16 +10,14 @@
   <div id="nc-root"></div>
 
   <!-- Optional: Manual init as fallback -->
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      if (window.DecapCMS) {
-        console.log("Decap CMS loaded successfully!");
-      } else {
-        console.error("Decap CMS script failed to load!");
-        // Check browser's Network tab for 404 errors
-      }
-    });
-  </script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/@decaporg/decap-cms@^1.0.0/dist/decap-cms.js";
+    script.onload = () => window.DecapCMS.init();
+    document.body.appendChild(script);
+  });
+</script>
     <!-- Load Decap CMS from CDN -->
   <script src="https://unpkg.com/@decaporg/decap-cms@^1.0.0/dist/decap-cms.js"></script>
 </body>
