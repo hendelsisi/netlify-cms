@@ -1,76 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Decap CMS</title>
+  <meta charset="utf-8">
+  <title>CMS</title>
   <style>
-    /* Critical isolation styles */
-    #cms-root {
+    /* Create a bulletproof container */
+    #cms-atomic-root {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      z-index: 9999;
+      z-index: 2147483647; /* Maximum possible z-index */
       background: white;
+      overflow: auto;
     }
   </style>
 </head>
 <body>
-  <!-- Dedicated isolated container -->
-  <div id="cms-root"></div>
-
+  <!-- Isolated atomic container -->
+  <iframe id="cms-iframe" style="display:none"></iframe>
+  
   <script>
     (function() {
-      // 1. Cleanup previous instances
-      function cleanup() {
-        const root = document.getElementById('cms-root');
-        if (root) root.innerHTML = '';
-        if (window.CMS && typeof window.CMS.dispose === 'function') {
-          window.CMS.dispose();
+      // 1. Nuclear cleanup
+      function atomicCleanup() {
+        const iframe = document.getElementById('cms-iframe');
+        if (iframe) {
+          iframe.style.display = 'none';
+          iframe.srcdoc = '';
+        }
+        if (window.CMS?.dispose) {
+          try { window.CMS.dispose(); } catch(e) {}
         }
       }
 
-      // 2. Load CMS with retry logic
-      function loadCMS() {
-        cleanup();
+      // 2. Atomic initialization
+      function atomicInit() {
+        atomicCleanup();
         
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/decap-cms@3.7.1/dist/decap-cms.js';
-        script.onload = function() {
-          // Wait for everything to settle
-          setTimeout(function() {
-            if (window.CMS) {
-              try {
-                window.CMS.init();
-                console.log('CMS initialized successfully');
-              } catch (e) {
-                console.error('CMS init error:', e);
-                // Retry once after delay
-                setTimeout(loadCMS, 500);
-              }
-            }
-          }, 100);
-        };
-        script.onerror = function() {
-          console.error('Failed to load CMS script');
-          // Retry with fallback CDN
-          setTimeout(function() {
-            const fallbackScript = document.createElement('script');
-            fallbackScript.src = 'https://cdn.jsdelivr.net/npm/decap-cms@3.7.1/dist/decap-cms.js';
-            document.body.appendChild(fallbackScript);
-          }, 500);
-        };
-        document.body.appendChild(script);
+        const iframe = document.getElementById('cms-iframe');
+        iframe.srcdoc = `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <base target="_parent">
+              <script src="https://unpkg.com/decap-cms@3.7.1/dist/decap-cms.js"><\/script>
+            </head>
+            <body>
+              <div id="nc-root"></div>
+              <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  if (window.CMS) {
+                    window.CMS.init();
+                    window.parent.postMessage('CMS_READY', '*');
+                  }
+                });
+              <\/script>
+            </body>
+          </html>
+        `;
+        iframe.style.display = 'block';
+        iframe.style.width = '100vw';
+        iframe.style.height = '100vh';
+        iframe.style.border = 'none';
       }
 
-      // 3. Start loading after DOM is fully ready
-      if (document.readyState === 'complete') {
-        loadCMS();
-      } else {
-        window.addEventListener('load', loadCMS);
+      // 3. Start when completely safe
+      function safeStart() {
+        if (document.readyState === 'complete') {
+          setTimeout(atomicInit, 100);
+        } else {
+          window.addEventListener('load', function() {
+            setTimeout(atomicInit, 100);
+          });
+        }
       }
+
+      // 4. Listen for ready message
+      window.addEventListener('message', function(e) {
+        if (e.data === 'CMS_READY') {
+          console.log('CMS initialized in atomic container');
+        }
+      });
+
+      safeStart();
     })();
   </script>
 </body>
