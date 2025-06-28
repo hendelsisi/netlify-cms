@@ -41,25 +41,31 @@
         
         const iframe = document.getElementById('cms-iframe');
         iframe.srcdoc = `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <base target="_parent">
-              <script src="https://cdn.jsdelivr.net/npm/decap-cms@^3.0.0/dist/decap-cms.js"><\/script>
-            </head>
-            <body>
-              <div id="nc-root"></div>
-              <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                  if (window.CMS) {
-                    window.CMS.init();
-                    window.parent.postMessage('CMS_READY', '*');
-                  }
-                });
-              <\/script>
-            </body>
-          </html>
-        `;
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <base target="_parent">
+      <script src="https://cdn.jsdelivr.net/npm/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+    </head>
+    <body>
+      <div id="nc-root"></div>
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          const root = document.getElementById('nc-root');
+          if (window.CMS && root) {
+            try {
+              window.CMS.init();
+              window.parent.postMessage('CMS_READY', '*');
+            } catch (e) {
+              window.parent.postMessage('CMS_ERROR: ' + e.message, '*');
+            }
+          }
+        });
+      </script>
+    </body>
+  </html>
+`;
+
         iframe.style.display = 'block';
         iframe.style.width = '100vw';
         iframe.style.height = '100vh';
